@@ -1,12 +1,12 @@
 from app.extensions import db
-from app.models import Submissao, AtividadeComplementar, Certificado, Usuario, Curso
-from sqlalchemy import select, func
+from app.models import Submissao, AtividadeComplementar, Certificado, Usuario, Curso, CoordenadorCurso
+from sqlalchemy import select
 from flask_jwt_extended import get_jwt, get_jwt_identity
+
 
 def criar_submissao_controller(data):
     id_aluno = int(get_jwt_identity())
-    # data espera: titulo, id_curso, id_regra_atividade, carga_horaria_solicitada, nome_arquivo, url_arquivo
-    # Primeiro cria o certificado
+
     certificado = Certificado(
         nome_arquivo=data["nome_arquivo"],
         url_arquivo=data["url_arquivo"]
@@ -14,7 +14,6 @@ def criar_submissao_controller(data):
     db.session.add(certificado)
     db.session.flush()
 
-    # Cria a atividade complementar
     atividade = AtividadeComplementar(
         descricao=data["titulo"],
         carga_horaria_solicitada=data["carga_horaria_solicitada"],
@@ -24,7 +23,6 @@ def criar_submissao_controller(data):
     db.session.add(atividade)
     db.session.flush()
 
-    # Cria a submissão
     nova_submissao = Submissao(
         id_aluno=id_aluno,
         status="pendente",
@@ -39,6 +37,7 @@ def criar_submissao_controller(data):
     db.session.commit()
 
     return {"success": True, "message": "Submissão criada com sucesso."}, 201
+
 
 def listar_submissoes_controller(status=None):
     role = get_jwt().get("role")
@@ -64,8 +63,11 @@ def listar_submissoes_controller(status=None):
     if role == "aluno":
         query = query.where(Submissao.id_aluno == id_usuario)
     elif role == "coordenador":
-        query = query.where(Submissao.id_curso.in_(select(CoordenadorCurso.id_curso).where(CoordenadorCurso.id_coordenador == id_usuario)))
-    # super_admin vê tudo
+        subquery = select(CoordenadorCurso.id_curso).where(
+            CoordenadorCurso.id_coordenador == id_usuario
+        )
+        query = query.where(Submissao.id_curso.in_(subquery))
+    # admin vê tudo — sem filtro adicional
 
     if status:
         query = query.where(Submissao.status == status)
@@ -90,6 +92,7 @@ def listar_submissoes_controller(status=None):
 
     return {"success": True, "submissoes": resultado}, 200
 
+
 def validar_submissao_controller(id_submissao, data):
     id_coordenador = int(get_jwt_identity())
     submissao = db.session.get(Submissao, id_submissao)
@@ -102,14 +105,15 @@ def validar_submissao_controller(id_submissao, data):
 
     submissao.status = novo_status
     submissao.id_coordenador = id_coordenador
+
     if novo_status == "recusado":
         submissao.motivo_rejeicao = data.get("motivo_rejeicao")
     elif novo_status == "aprovado":
-        # Aprova com a carga horária solicitada (ou pode vir no payload)
-        carga_aprovada = data.get("carga_horaria_aprovada", submissao.atividade_complementar.carga_horaria_solicitada)
+        # Busca a atividade separadamente (sem depender de relationship)
+        atividade = db.session.get(AtividadeComplementar, submissao.id_atividade_complementar)
+        carga_aprovada = data.get("carga_horaria_aprovada") or atividade.carga_horaria_solicitada
         submissao.carga_horaria_aprovada = carga_aprovada
-        # Atualiza também na atividade complementar (opcional)
-        submissao.atividade_complementar.carga_horaria_aprovada = carga_aprovada
+        atividade.carga_horaria_aprovada = carga_aprovada
 
     db.session.commit()
     return {"success": True, "message": f"Submissão {novo_status} com sucesso."}, 200

@@ -18,12 +18,13 @@ def create_app() -> Flask:
     migrate.init_app(app, db)
     jwt.init_app(app)
     
-    from app.routes import bp_usuario, bp_submissao, bp_auth, bp_curso, bp_regra, bp_relatorio
+    from app.routes import bp_usuario, bp_submissao, bp_auth, bp_curso, bp_regra, bp_relatorio, bp_certificado
     app.register_blueprint(bp_usuario)
     app.register_blueprint(bp_submissao)
     app.register_blueprint(bp_auth)
     app.register_blueprint(bp_curso)
     app.register_blueprint(bp_regra)
     app.register_blueprint(bp_relatorio)
+    app.register_blueprint(bp_certificado)
 
     return app

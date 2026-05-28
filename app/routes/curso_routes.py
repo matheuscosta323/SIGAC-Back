@@ -22,7 +22,7 @@ def cadastrar_usuario():
         }, 500
 
 @bp.route("/listar", methods=["GET"])
-@verificar_role(["admin", "coordenador"])
+@verificar_role(["admin", "coordenador", "aluno"])
 def listar_cursos():
     try:
         response, status = listar_cursos_controller()

@@ -27,7 +27,7 @@ def listar_submissoes():
         return {"success": False, "message": "Erro interno."}, 500
 
 @bp.route("/validar/<int:id_submissao>", methods=["PUT"])
-@verificar_role(["coordenador"])
+@verificar_role(["coordenador", "admin"])
 def validar_submissao(id_submissao):
     try:
         data = request.get_json()

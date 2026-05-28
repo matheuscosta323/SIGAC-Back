@@ -10,7 +10,7 @@ from app.controllers.regra_controller import (
 bp = Blueprint("regra", __name__, url_prefix="/api/regras")
 
 @bp.route("/listar", methods=["GET"])
-@verificar_role(["admin", "coordenador"])
+@verificar_role(["admin", "coordenador", "aluno"])
 def listar_regras():
     curso_id = request.args.get("curso_id", type=int)
     response, status = listar_regras_controller(curso_id)

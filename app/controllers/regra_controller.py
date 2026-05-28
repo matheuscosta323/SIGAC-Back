@@ -5,7 +5,7 @@ from flask_jwt_extended import get_jwt
 
 def listar_regras_controller(curso_id=None):
     role = get_jwt().get("role")
-    if role not in ("admin", "coordenador"):
+    if role not in ("admin", "coordenador", "aluno"):
         return {"success": False, "message": "Acesso negado."}, 403
 
     query = select(RegraAtividade)

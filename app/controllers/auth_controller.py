@@ -23,7 +23,7 @@ def login_controller(data):
 
     access_token = create_access_token(
         identity=str(usuario.id),
-        additional_claims={"role": usuario.tipo}
+        additional_claims={"role": usuario.tipo, "nome": usuario.nome}
     )
         
     return {
