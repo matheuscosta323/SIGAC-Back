@@ -5,7 +5,7 @@ from app.models import Certificado, AtividadeComplementar, Submissao, RegraAtivi
 from sqlalchemy import select, func
 from flask_jwt_extended import get_jwt_identity
 
-PASTA_UPLOAD = "certificados_uploaded"
+PASTA_UPLOAD = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "certificados_uploaded")
 EXTENSOES_PERMITIDAS = {"pdf", "png", "jpg", "jpeg"}
 
 

@@ -1,4 +1,5 @@
 import os
+import traceback
 from flask import Blueprint, request, jsonify
 from app.middlewares import verificar_role
 from app.controllers import upload_certificado_controller
@@ -28,5 +29,6 @@ def upload_certificado():
         return jsonify(response), status
 
     except Exception as e:
-        print(f"Erro no upload: {e}")
-        return jsonify({"success": False, "message": "Erro interno"}), 500
+        erro_detalhado = traceback.format_exc()
+        print(f"Erro no upload:\n{erro_detalhado}")
+        return jsonify({"success": False, "message": f"Erro interno: {str(e)}"}), 500
