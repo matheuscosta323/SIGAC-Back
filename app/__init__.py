@@ -15,13 +15,13 @@ def create_app() -> Flask:
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=1)
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-        "connect_args": {
-            "ssl": {
-                "ca": "/etc/ssl/certs/ca-certificates.crt"
-            }
+    "connect_args": {
+        "ssl": {
+            "check_hostname": False,
+            "verify_mode": 0  # ssl.CERT_NONE
         }
     }
-    # resto do código...
+}
 
     db.init_app(app)
     migrate.init_app(app, db)
