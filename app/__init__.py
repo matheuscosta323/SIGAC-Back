@@ -5,7 +5,6 @@ import os
 from flask_cors import CORS
 from datetime import timedelta
 
-
 def create_app() -> Flask:
     app = Flask(__name__)
     CORS(app)
@@ -15,6 +14,14 @@ def create_app() -> Flask:
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET")
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=1)
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "connect_args": {
+            "ssl": {
+                "ca": "/etc/ssl/certs/ca-certificates.crt"
+            }
+        }
+    }
+    # resto do código...
 
     db.init_app(app)
     migrate.init_app(app, db)
