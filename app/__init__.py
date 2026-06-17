@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import os
 from flask_cors import CORS
 from datetime import timedelta
+from app.models import *
 
 def create_app() -> Flask:
     app = Flask(__name__)
@@ -26,6 +27,9 @@ def create_app() -> Flask:
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
+    
+    with app.app_context():
+        db.create_all()
 
     # Blueprints de negócio
     from app.routes import bp_usuario, bp_submissao, bp_auth, bp_curso, bp_regra, bp_relatorio, bp_certificado
