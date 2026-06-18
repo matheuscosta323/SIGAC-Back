@@ -1,3 +1,4 @@
+from functools import wraps
 from flask_jwt_extended import verify_jwt_in_request, get_jwt
 
 
@@ -5,6 +6,7 @@ def verificar_role(roles_permitidas):
 
     def decorator(function):
 
+        @wraps(function)
         def wrapper(*args, **kwargs):
             verify_jwt_in_request()
             role = get_jwt().get("role")
@@ -13,8 +15,8 @@ def verificar_role(roles_permitidas):
                     "success": False,
                     "message": "Acesso negado."
                 }, 403
-            wrapper.__name__ = function.__name__
             return function(*args, **kwargs)
+
         return wrapper
 
     return decorator
