@@ -6,3 +6,4 @@ from .certificado import Certificado
 from .coordenador_curso import CoordenadorCurso
 from .aluno_curso import AlunoCurso
 from .atividade_complementar import AtividadeComplementar
+from .dashboard_aluno import DashboardAluno

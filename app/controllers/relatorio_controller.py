@@ -1,7 +1,7 @@
 from app.extensions import db
 from app.models import (
     Usuario, Submissao, Curso, RegraAtividade,
-    AtividadeComplementar, CoordenadorCurso, AlunoCurso
+    AtividadeComplementar, CoordenadorCurso, AlunoCurso, DashboardAluno
 )
 from sqlalchemy import select, func
 from flask_jwt_extended import get_jwt, get_jwt_identity
@@ -229,3 +229,58 @@ def dashboard_controller():
         })
 
     return {"success": True, "cursos": cursos}, 200
+
+
+def dashboard_aluno_controller():
+    id_aluno = int(get_jwt_identity())
+
+    aluno_curso = db.session.execute(
+        select(AlunoCurso).where(AlunoCurso.id_aluno == id_aluno)
+    ).scalar_one_or_none()
+
+    if not aluno_curso:
+        return {"success": False, "message": "Aluno sem curso vinculado."}, 404
+
+    curso = db.session.execute(
+        select(Curso).where(Curso.id == aluno_curso.id_curso)
+    ).scalar_one()
+
+    registros = db.session.execute(
+        select(DashboardAluno)
+        .where(DashboardAluno.id_aluno == id_aluno)
+        .where(DashboardAluno.id_curso == curso.id)
+    ).scalars().all()
+
+    total_aprovadas = 0
+    areas = []
+    for registro in registros:
+        total_aprovadas += registro.horas_aprovadas
+        areas.append({
+            "area": registro.area,
+            "horas_aprovadas": registro.horas_aprovadas,
+            "limite_horas": registro.limite_horas,
+            "percentual": round((registro.horas_aprovadas / registro.limite_horas) * 100, 1)
+        })
+
+    def contar_status(status):
+        return db.session.execute(
+            select(func.count()).select_from(Submissao)
+            .where(Submissao.id_aluno == id_aluno)
+            .where(Submissao.status == status)
+        ).scalar()
+
+    return {
+        "success": True,
+        "curso": curso.nome,
+        "progresso": {
+            "horas_aprovadas": total_aprovadas,
+            "carga_horaria_total": curso.carga_horaria,
+            "percentual": round((total_aprovadas / curso.carga_horaria) * 100, 1) if curso.carga_horaria > 0 else 0
+        },
+        "horas_por_area": areas,
+        "solicitacoes": {
+            "pendentes": contar_status("pendente"),
+            "aprovadas": contar_status("aprovado"),
+            "recusadas": contar_status("recusado")
+        }
+    }, 200

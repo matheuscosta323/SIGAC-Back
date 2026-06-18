@@ -4,9 +4,17 @@ from dotenv import load_dotenv
 import os
 from flask_cors import CORS
 from datetime import timedelta
+from app.models import *
+
+# Pasta onde os certificados são salvos (mesma usada em certificado_controller.py)
+PASTA_CERTIFICADOS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "certificados_uploaded")
 
 def create_app() -> Flask:
-    app = Flask(__name__)
+    app = Flask(
+        __name__,
+        static_folder=PASTA_CERTIFICADOS,
+        static_url_path="/certificados_uploaded"
+    )
     CORS(app)
 
     load_dotenv()
@@ -26,6 +34,9 @@ def create_app() -> Flask:
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
+    
+    with app.app_context():
+        db.create_all()
 
     # Blueprints de negócio
     from app.routes import bp_usuario, bp_submissao, bp_auth, bp_curso, bp_regra, bp_relatorio, bp_certificado

@@ -7,9 +7,6 @@ from werkzeug.security import generate_password_hash
 app = create_app()
 
 with app.app_context():
-    # Roda as migrations
-    upgrade()
-
     # Cria o admin se não existir
     admin_existente = db.session.execute(
         db.select(Usuario).where(Usuario.tipo == "admin")
