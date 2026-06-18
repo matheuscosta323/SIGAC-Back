@@ -6,6 +6,7 @@ from app.models import (
 from sqlalchemy import select, func
 from flask_jwt_extended import get_jwt, get_jwt_identity
 from datetime import datetime, timedelta
+from flask import request as flask_request
 
 
 # ─────────────────────────────────────────────
@@ -21,7 +22,6 @@ def _ids_cursos_coordenador(id_coordenador):
 
 
 def _metricas_curso(id_curso):
-    """Retorna dict de métricas filtradas por um único curso."""
     total_alunos = db.session.execute(
         select(func.count(func.distinct(AlunoCurso.id_aluno)))
         .where(AlunoCurso.id_curso == id_curso)
@@ -98,7 +98,6 @@ def _distribuicao_curso(id_curso):
 
 
 def _submissoes_curso(id_curso):
-    """Retorna lista detalhada de submissões com nome do aluno e área."""
     rows = db.session.execute(
         select(
             Submissao.id,
@@ -128,7 +127,7 @@ def _submissoes_curso(id_curso):
 
 
 # ─────────────────────────────────────────────
-# Controller principal
+# Controllers
 # ─────────────────────────────────────────────
 
 def dashboard_controller():
@@ -137,7 +136,6 @@ def dashboard_controller():
     if role not in ("admin", "coordenador"):
         return {"success": False, "message": "Acesso negado."}, 403
 
-    # ── ADMIN: dados globais ──────────────────
     if role == "admin":
         total_alunos = db.session.execute(
             select(func.count()).select_from(Usuario).where(Usuario.tipo == "aluno")
@@ -206,7 +204,6 @@ def dashboard_controller():
             "top_cursos": [{"curso": r.curso, "horas": int(r.horas)} for r in top_rows]
         }, 200
 
-    # ── COORDENADOR: um bloco por curso ──────
     id_coordenador = int(get_jwt_identity())
     cursos_ids = _ids_cursos_coordenador(id_coordenador)
 
@@ -231,51 +228,89 @@ def dashboard_controller():
     return {"success": True, "cursos": cursos}, 200
 
 
-def dashboard_aluno_controller():
+def meus_cursos_controller():
+    """Retorna todos os cursos vinculados ao aluno autenticado."""
     id_aluno = int(get_jwt_identity())
 
-    aluno_curso = db.session.execute(
-        select(AlunoCurso).where(AlunoCurso.id_aluno == id_aluno)
-    ).scalar_one_or_none()
+    rows = db.session.execute(
+        select(Curso.id, Curso.nome, Curso.carga_horaria)
+        .join(AlunoCurso, AlunoCurso.id_curso == Curso.id)
+        .where(AlunoCurso.id_aluno == id_aluno)
+        .order_by(Curso.nome)
+    ).all()
 
-    if not aluno_curso:
+    if not rows:
         return {"success": False, "message": "Aluno sem curso vinculado."}, 404
 
+    cursos = [
+        {"id": r.id, "nome": r.nome, "carga_horaria": r.carga_horaria}
+        for r in rows
+    ]
+    return {"success": True, "cursos": cursos}, 200
+
+
+def dashboard_aluno_controller():
+    """
+    Retorna o dashboard do aluno filtrado por um curso específico.
+    Query param obrigatório: ?id_curso=<int>
+    """
+    id_aluno = int(get_jwt_identity())
+
+    # Lê o id_curso do query string
+    id_curso_param = flask_request.args.get("id_curso", type=int)
+    if not id_curso_param:
+        return {"success": False, "message": "Parâmetro id_curso é obrigatório."}, 400
+
+    # Valida que o aluno realmente está vinculado a este curso
+    vinculo = db.session.execute(
+        select(AlunoCurso)
+        .where(AlunoCurso.id_aluno == id_aluno)
+        .where(AlunoCurso.id_curso == id_curso_param)
+    ).scalar_one_or_none()
+
+    if not vinculo:
+        return {"success": False, "message": "Aluno não vinculado a este curso."}, 403
+
     curso = db.session.execute(
-        select(Curso).where(Curso.id == aluno_curso.id_curso)
+        select(Curso).where(Curso.id == id_curso_param)
     ).scalar_one()
 
+    # Horas por área para este curso específico
     registros = db.session.execute(
         select(DashboardAluno)
         .where(DashboardAluno.id_aluno == id_aluno)
-        .where(DashboardAluno.id_curso == curso.id)
+        .where(DashboardAluno.id_curso == id_curso_param)
     ).scalars().all()
 
-    total_aprovadas = 0
-    areas = []
-    for registro in registros:
-        total_aprovadas += registro.horas_aprovadas
-        areas.append({
-            "area": registro.area,
-            "horas_aprovadas": registro.horas_aprovadas,
-            "limite_horas": registro.limite_horas,
-            "percentual": round((registro.horas_aprovadas / registro.limite_horas) * 100, 1)
-        })
+    total_aprovadas = sum(r.horas_aprovadas for r in registros)
+    areas = [
+        {
+            "area": r.area,
+            "horas_aprovadas": r.horas_aprovadas,
+            "limite_horas": r.limite_horas,
+            "percentual": round((r.horas_aprovadas / r.limite_horas) * 100, 1)
+            if r.limite_horas > 0 else 0
+        }
+        for r in registros
+    ]
 
     def contar_status(status):
         return db.session.execute(
             select(func.count()).select_from(Submissao)
             .where(Submissao.id_aluno == id_aluno)
+            .where(Submissao.id_curso == id_curso_param)
             .where(Submissao.status == status)
         ).scalar()
 
     return {
         "success": True,
+        "id_curso": curso.id,
         "curso": curso.nome,
         "progresso": {
             "horas_aprovadas": total_aprovadas,
             "carga_horaria_total": curso.carga_horaria,
-            "percentual": round((total_aprovadas / curso.carga_horaria) * 100, 1) if curso.carga_horaria > 0 else 0
+            "percentual": round((total_aprovadas / curso.carga_horaria) * 100, 1)
+            if curso.carga_horaria > 0 else 0
         },
         "horas_por_area": areas,
         "solicitacoes": {
