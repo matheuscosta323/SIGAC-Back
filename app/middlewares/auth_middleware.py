@@ -13,7 +13,7 @@ def verificar_role(roles_permitidas):
                     "success": False,
                     "message": "Acesso negado."
                 }, 403
-            wrapper.__name__ == function.__name__
+            wrapper.__name__ = function.__name__
             return function(*args, **kwargs)
         return wrapper
 
