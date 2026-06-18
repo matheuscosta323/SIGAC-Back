@@ -6,8 +6,15 @@ from flask_cors import CORS
 from datetime import timedelta
 from app.models import *
 
+# Pasta onde os certificados são salvos (mesma usada em certificado_controller.py)
+PASTA_CERTIFICADOS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "certificados_uploaded")
+
 def create_app() -> Flask:
-    app = Flask(__name__)
+    app = Flask(
+        __name__,
+        static_folder=PASTA_CERTIFICADOS,
+        static_url_path="/certificados_uploaded"
+    )
     CORS(app)
 
     load_dotenv()

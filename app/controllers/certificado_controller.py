@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+from flask import request
 from app.extensions import db
 from app.models import Certificado, AtividadeComplementar, Submissao, RegraAtividade, AlunoCurso
 from sqlalchemy import select, func
@@ -75,8 +76,11 @@ def upload_certificado_controller(data, arquivo):
     filepath = os.path.join(PASTA_UPLOAD, nome_arquivo)
     arquivo.save(filepath)
 
+    # URL pública do arquivo (servido como estático pelo Flask, ver app/__init__.py)
+    url_publica = f"{request.host_url.rstrip('/')}/certificados_uploaded/{nome_arquivo}"
+
     # Criar certificado
-    certificado = Certificado(nome_arquivo=nome_arquivo, url_arquivo=filepath)
+    certificado = Certificado(nome_arquivo=nome_arquivo, url_arquivo=url_publica)
     db.session.add(certificado)
     db.session.flush()
 
