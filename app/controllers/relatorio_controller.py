@@ -9,9 +9,6 @@ from datetime import datetime, timedelta
 from flask import request as flask_request
 
 
-# ─────────────────────────────────────────────
-# Helpers
-# ─────────────────────────────────────────────
 
 def _ids_cursos_coordenador(id_coordenador):
     rows = db.session.execute(
@@ -126,9 +123,6 @@ def _submissoes_curso(id_curso):
     } for r in rows]
 
 
-# ─────────────────────────────────────────────
-# Controllers
-# ─────────────────────────────────────────────
 
 def dashboard_controller():
     claims = get_jwt()
@@ -229,7 +223,7 @@ def dashboard_controller():
 
 
 def meus_cursos_controller():
-    """Retorna todos os cursos vinculados ao aluno autenticado."""
+    
     id_aluno = int(get_jwt_identity())
 
     rows = db.session.execute(
@@ -250,10 +244,7 @@ def meus_cursos_controller():
 
 
 def dashboard_aluno_controller():
-    """
-    Retorna o dashboard do aluno filtrado por um curso específico.
-    Query param obrigatório: ?id_curso=<int>
-    """
+
     id_aluno = int(get_jwt_identity())
 
     # Lê o id_curso do query string
